@@ -69,3 +69,17 @@ Here you can see that pulse is not detected as it was never sampled. We can eith
 
 here we convert the small pulse into level that is easily detectable through slow clockB. Edge detection technique is used to generate pulses in clock B.
 Issue arises when multiple pulses are generated in clkA domain as double synchronizer will miss out some of these pulses due to metastability of the previous pulse and also the fact that they are in slower clkB.
+
+# Standard process: Handshake based pulse synchronizer(transfer of pulse from clock domains)
+
+<img width="868" height="520" alt="image" src="https://github.com/user-attachments/assets/b6e7e54f-1779-4712-a429-a069c0f52cc7" />
+
+
+See the Karthik Vippala's last 3 minute summary or the video for understanding.
+
+
+<img width="770" height="512" alt="image" src="https://github.com/user-attachments/assets/3369556d-8318-4fcc-90a1-b68c65b1df01" />
+
+In short-: sinput produces pulse and allows a permanent feedback loop that generates 1 level at q which travels through double synchronizers and the delay ff and through edge detection technique sync_out is produced as the resultant pulse in different clock domain. 
+To prevent sinput or the user to produce another pulse before the previous pulse is completely utilised we use a feedback loop that travels through 2 flops of clka back to busy or gate which turn it on that tells the user not to generate a pulse anymore. This changes the mux's select line and now one of the input of busy or gate is made zero but the 0 needs to travel through 5 muxes(3 of clka and 2 of clkb) to make the other input of Mux =0 to allow more pulses.
+
