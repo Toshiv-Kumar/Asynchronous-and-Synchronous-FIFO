@@ -83,3 +83,10 @@ See the Karthik Vippala's last 3 minute summary or the video for understanding.
 In short-: sinput produces pulse and allows a permanent feedback loop that generates 1 level at q which travels through double synchronizers and the delay ff and through edge detection technique sync_out is produced as the resultant pulse in different clock domain. 
 To prevent sinput or the user to produce another pulse before the previous pulse is completely utilised we use a feedback loop that travels through 2 flops of clka back to busy or gate which turn it on that tells the user not to generate a pulse anymore. This changes the mux's select line and now one of the input of busy or gate is made zero but the 0 needs to travel through 5 muxes(3 of clka and 2 of clkb) to make the other input of Mux =0 to allow more pulses.
 
+## ICG(Integrated Clock gating technique for decreasing dynamic power dissipation)
+https://youtu.be/X5arXnfDTEk
+
+Refer Prof. Jankiraman notes for Dynamic power dissipation
+In short-: In half cycle of input of inverter either changin to 1 or 0, one path closes and the other opens up. The closed path for example vdd to capcitor charges the capacitor and half of the energy is lost. Cap only stores 1/2 * C * (Vdd^2) . Energy provided by the source battery is C(vdd^2)
+
+## Synchronous FIFO/CDC/gray_encode_decode/(not power of 2 depth issue)/Asynchronous FIFO
