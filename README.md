@@ -1,6 +1,7 @@
 # Asynchronous-and-Synchronous-FIFO
 Designed Synchronous and Asynchronous FIFO in Verilog HDL and verified the design using a simple testbench. January 2026
 
+<img width="842" height="593" alt="image" src="https://github.com/user-attachments/assets/4ac7ca89-e67b-4f41-b63a-a07eb50d77bb" />
 
 
 ***
@@ -20,6 +21,7 @@ See CMOS Prof.Janakiraman for setup and hold time intuition.
 In short-: Why setup time is needed? Master Latch is on before the sampling edge and it needs to store the new incoming data in the feedback loop as the feedback loop will turn on closing the data input path. The time delay of all the inverters and pass transmission gates it needs to pass through till it reaches the last transmission gate of **Breaking the FB configuration.** is the setup time.
 Hold time is required in case of clock skew(on clkbar-: negative skew in +ve edge trigger) in case of 1-1 overlap of clk and clkbar where data can shoot through both the latch's transmission gates if data changes during the thold, this is a race condition.
 
+Also refer to Prof.Jankiraman's Metastability video
 ### MTBF
 Is is inversely proportional to (sampling frequency(of data acceptor clock)* frequency of change of data), obviously as if the input change increases then more likely that it will change within setup or hold window and failure/metastabillity will happen.
 
@@ -87,6 +89,98 @@ To prevent sinput or the user to produce another pulse before the previous pulse
 https://youtu.be/X5arXnfDTEk
 
 Refer Prof. Jankiraman notes for Dynamic power dissipation
-In short-: In half cycle of input of inverter either changin to 1 or 0, one path closes and the other opens up. The closed path for example vdd to capcitor charges the capacitor and half of the energy is lost. Cap only stores 1/2 * C * (Vdd^2) . Energy provided by the source battery is C(vdd^2)
+In short-: In half cycle of input of inverter either changin to 1 or 0, one path closes and the other opens up. The closed path for example vdd to capcitor charges the capacitor and half of the energy is lost. Cap only stores 1/2 * C * (Vdd^2) . Energy provided by the source battery is C(vdd^2). E = integration over time of Vi*I w.r.t time where i =cdvo/dt
 
 ## Synchronous FIFO/CDC/gray_encode_decode/(not power of 2 depth issue)/Asynchronous FIFO
+Refer Flop_n_Adder(2 videos)
+Refer Karthik Vippali(3 videos)
+**Most Importantly refer your own code as it is much different from Karthik Vippali.**
+https://youtu.be/oUxa8itti8w
+
+**Important things to learn only from your code-: Full and empty condition.**
+
+## Depth calculation
+https://youtu.be/-xLedxOJC3s
+
+https://youtu.be/-xxiyB-k2vg
+
+
+# **Learnings:**
+
+1. **D-FF is a delay flip-flop (but not always).**
+   This is because if the input **D data changes exactly at the clock’s sampling edge** (edge-triggered), then the output may either:
+
+   * pull the **previous stable value of D**, or
+   * go into a **metastable state** (≈ VDD/2).
+
+   We consider the case where it pulls the **previous stable value** and *not* the metastable state, because only then does it behave like a **one-clock-cycle delay element**.
+
+2. **Latch in Verilog** is inferred using a **combinational block with incomplete assignments**, but the output `q` is declared as a **register type**.
+
+3. When **reset (rst) is asserted in a FIFO**, the values stored in memory are **not reset**. Only the **read and write pointers are reset**, and the previously stored values are simply **ignored and later overwritten** with new ones.
+
+4. If a design is said to be **synchronous**, then most probably **all subsystems/modules run on the same synchronous clock domain** as the other modules.
+
+5. **Debugging Issue:**
+   In **structural Verilog modeling**, when interconnecting subsystems in the top module, if some **port names are left out**, it is **not shown as an error** by the compiler and those ports simply remain **disconnected**, which can be very hard to debug.
+
+6. `3'bxxx` is **not synthesizable** and works only for **simulation**. Instead, use an **impossible or reserved value** of your choice.
+
+7. Instead of creating a **slower clock internally from a global clock** (i.e., creating multiple clock domains), it is better to:
+
+   * use **clock enables** within a single global clock using `if` conditionals, or
+   * use **FSM states as delay mechanisms** to execute instructions after a certain number of states.
+
+   Note that this will **not truly act like different clock domains with different frequencies**—everything still operates in **multiples of the same base clock frequency**.
+
+8. Use **positional or named ports** and **parameterized design** to prevent debugging issues.
+
+9. **Important point to remember:**
+   When we transfer `wptr` to the **slower clock domain of `rptr`**, some `wptr` values are **missed by the double D-FF (two-stage) synchronizers**, but this is **acceptable**.
+   This is because the **empty condition will never actually be falsely activated**. Data is most likely written faster, the FIFO will rarely be empty, and the read can proceed freely.
+   This should be verified using **timing analysis practice**.
+
+10. **Challenges faced – Handshake / Producer–Consumer Protocol:**
+    If there is **no way to tell the producer to pause** and stop providing data, the producer will **continuously push data**, unaware of whether the FIFO is **full or almost full**. Hence, **full and almost_full must be outputs of the FIFO** and fed back to the producer.
+
+    **Need for almost_full:**
+    There are multiple reasons—analyze the waveform for better understanding. Key points:
+
+    * `wdata` is a **delayed version of `from_user`**.
+    * `wr_en` must write **`wdata`**, not `from_user`.
+    * In the testbench, we decide on the **negedge of the clock** whether the FIFO is full or not, but we did **not check almost_full**.
+    * Just before the FIFO becomes full on the **rising edge of `w_clk`**, on the previous negedge we see that it is not full and pass a new value to `from_user`.
+    * The **full condition only changes** due to `wdata` being written on the incoming posedge.
+    * Full prevents `wdata` from being written, but we must **also prevent `from_user` from generating a new value**, which is why **almost_full is required**.
+
+    **Second issue – Valid data handling:**
+    After `wen/ren` is asserted (`1'b1`), the data written into or read from the FIFO must be handled in the **same number of clock cycles**.
+    In this design, the **read operation takes one extra clock cycle**, so the consumer was made **combinational**.
+
+    However, note that the consumer may take time to evaluate the current `to_the_user` value. A better design improvement would be to introduce a **`read_valid` signal**.
+    Only when `read_valid == 1'b1` should the `rptr` increment and the next data be read from the FIFO.
+
+    Without a **valid-input mechanism**, the design does not work correctly. Refer to the testbench code below:
+
+    ```verilog
+    repeat(50) begin
+    @(negedge w_clk) begin
+        if((dut.wen == 1'b1) && (dut.full == 1'b0) && (almost_full == 1'b0)) begin
+        
+            valid_input = 1'b1;
+            from_user = $urandom();
+            
+        end
+        else begin
+            valid_input = 1'b0;
+        end
+    ```
+
+    There will always be some **valid or invalid value** present on `from_user` from the producer.
+    `wen` depends on whether the FIFO is full, and we use `full` to determine if it is safe to write into the FIFO.
+
+    If the producer has finished sending all data and only the **last floating value of `from_user` remains** (which is invalid and should not be written), it still gets written because the FIFO only checks the **full condition** and has no knowledge of data validity.
+
+    In real-world scenarios, this cannot be allowed. The FIFO should **stop accepting data** and then **gradually drain to the empty state**.
+    Hence, we transfer **`wr_valid`** to the FIFO to tell it to **stop completely** and allow it to drain naturally to the empty state.
+
