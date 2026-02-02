@@ -325,7 +325,7 @@ https://youtu.be/-xxiyB-k2vg
    This should be verified using **timing analysis practice**.
 
 10. **Challenges faced – Handshake / Producer–Consumer Protocol:**
-    If there is **no way to tell the producer to pause** and stop providing data, the producer will **continuously push data**, unaware of whether the FIFO is **full or almost full**. Hence, **full and almost_full must be outputs of the FIFO** and fed back to the producer.
+    If there is **no way to tell the producer to pause** and stop providing data, the producer will **continuously push data**, unaware of whether the FIFO is **full or almost full**. Hence, **full and almost_full must be outputs of the FIFO** and fed back to the producer. The Picture below shows why almost_full is needed.
 <img width="842" height="593" alt="image" src="https://github.com/user-attachments/assets/4ac7ca89-e67b-4f41-b63a-a07eb50d77bb" />
 
     **Need for almost_full:**
